@@ -9,4 +9,5 @@ public sealed record GeneralConfig
 	[Required] public required Uri Url { get; set; }
 	[Required] public required Uri Jetstream { get; set; }
 	[Required] public required string WantedCollections { get; set; }
+	[Required] public required int MessageConcurrency { get; set; } = 256;
 }

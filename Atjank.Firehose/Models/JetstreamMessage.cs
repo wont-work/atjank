@@ -59,9 +59,10 @@ sealed record JetstreamIdentity : JetstreamMessage
 	public record Data
 	{
 		public required string Did { get; init; }
-		public required string Handle { get; init; }
 		public required ulong Seq { get; init; }
 		public required DateTime Time { get; init; }
+
+		public string? Handle { get; init; }
 	}
 }
 
