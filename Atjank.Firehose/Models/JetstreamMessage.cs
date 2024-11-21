@@ -13,13 +13,13 @@ namespace Atjank.Firehose.Models;
 [JsonDerivedType(typeof(JetstreamAccount), "account")]
 record JetstreamMessage
 {
-	[JsonRequired] public string Did { get; init; }
-	[JsonRequired] public ulong TimeUs { get; init; }
+	public required string Did { get; init; }
+	public required ulong TimeUs { get; init; }
 }
 
 sealed record JetstreamCommit : JetstreamMessage
 {
-	[JsonRequired] public Data Commit { get; init; }
+	public required Data Commit { get; init; }
 
 	[JsonPolymorphic(
 		TypeDiscriminatorPropertyName = "operation",
@@ -31,21 +31,21 @@ sealed record JetstreamCommit : JetstreamMessage
 	[UsedImplicitly]
 	public record Data
 	{
-		[JsonRequired] public string Rev { get; init; }
-		[JsonRequired] public string Collection { get; init; }
-		[JsonRequired] public string Rkey { get; init; }
+		public required string Rev { get; init; }
+		public required string Collection { get; init; }
+		public required string Rkey { get; init; }
 	}
 
 	public record Create : Data
 	{
-		[JsonRequired] public JsonObject Record { get; init; }
-		[JsonRequired] public string Cid { get; init; }
+		public required JsonObject Record { get; init; }
+		public required string Cid { get; init; }
 	}
 
 	public record Update : Data
 	{
-		[JsonRequired] public JsonObject Record { get; init; }
-		[JsonRequired] public string Cid { get; init; }
+		public required JsonObject Record { get; init; }
+		public required string Cid { get; init; }
 	}
 
 	public record Delete : Data;
@@ -53,28 +53,28 @@ sealed record JetstreamCommit : JetstreamMessage
 
 sealed record JetstreamIdentity : JetstreamMessage
 {
-	[JsonRequired] public Data Identity { get; init; }
+	public required Data Identity { get; init; }
 
 	[UsedImplicitly]
 	public record Data
 	{
-		[JsonRequired] public string Did { get; init; }
-		[JsonRequired] public string Handle { get; init; }
-		[JsonRequired] public ulong Seq { get; init; }
-		[JsonRequired] public DateTime Time { get; init; }
+		public required string Did { get; init; }
+		public required string Handle { get; init; }
+		public required ulong Seq { get; init; }
+		public required DateTime Time { get; init; }
 	}
 }
 
 sealed record JetstreamAccount : JetstreamMessage
 {
-	[JsonRequired] public Data Account { get; init; }
+	public required Data Account { get; init; }
 
 	[UsedImplicitly]
 	public record Data
 	{
-		[JsonRequired] public bool Active { get; init; }
-		[JsonRequired] public string Did { get; init; }
-		[JsonRequired] public ulong Seq { get; init; }
-		[JsonRequired] public DateTime Time { get; init; }
+		public required bool Active { get; init; }
+		public required string Did { get; init; }
+		public required ulong Seq { get; init; }
+		public required DateTime Time { get; init; }
 	}
 }

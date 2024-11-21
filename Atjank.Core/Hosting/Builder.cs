@@ -88,7 +88,7 @@ public static class Builder
 		builder.Services
 			.AddHttpClient("", (svc, opt) =>
 			{
-				var cfg = svc.GetRequiredService<IOptionsMonitor<AppViewConfig>>().CurrentValue;
+				var cfg = svc.GetRequiredService<IOptionsMonitor<GeneralConfig>>().CurrentValue;
 
 				opt.DefaultRequestVersion = HttpVersion.Version20;
 				opt.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;

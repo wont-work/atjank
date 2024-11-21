@@ -32,7 +32,7 @@ public static class AtjankApp
 	{
 		await using var boot = app.Services.CreateAsyncScope();
 
-		var cfg = boot.ServiceProvider.GetRequiredService<IOptions<AppViewConfig>>();
+		var cfg = boot.ServiceProvider.GetRequiredService<IOptions<GeneralConfig>>();
 		var logFactory = boot.ServiceProvider.GetRequiredService<ILoggerFactory>();
 		var log = logFactory.CreateLogger("Atjank");
 

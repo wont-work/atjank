@@ -20,8 +20,8 @@ public static class ConfigBuilderExt
 		builder.Configuration.AddEnvironmentVariables("ATJANK_");
 
 		builder.Services
-			.AddOptions<AppViewConfig>()
-			.BindConfiguration(AppViewConfig.Section)
+			.AddOptions<GeneralConfig>()
+			.BindConfiguration(GeneralConfig.Section)
 			.ValidateDataAnnotations()
 			.ValidateOnStart();
 

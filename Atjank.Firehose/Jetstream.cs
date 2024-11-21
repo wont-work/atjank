@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Atjank.Firehose;
 
-sealed class Jetstream(ILogger<Jetstream> log, IOptionsSnapshot<AppViewConfig> cfg, HttpClient http) : IDisposable
+sealed class Jetstream(ILogger<Jetstream> log, IOptionsSnapshot<GeneralConfig> cfg, HttpClient http) : IDisposable
 {
 	public static readonly JsonSerializerOptions JsonOptions = new()
 	{

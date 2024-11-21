@@ -74,7 +74,7 @@ static class Builder
 				return next();
 			});
 
-		var url = ((IEndpointRouteBuilder)app).ServiceProvider.GetRequiredService<IOptions<AppViewConfig>>().Value.Url
+		var url = ((IEndpointRouteBuilder)app).ServiceProvider.GetRequiredService<IOptions<GeneralConfig>>().Value.Url
 			.ToString();
 
 		app.MapOpenApi();
