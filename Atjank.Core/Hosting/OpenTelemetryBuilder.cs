@@ -26,21 +26,16 @@ public static class OpenTelemetryBuilder
 		if (otelCfg?.BaseUri == null)
 			return builder;
 
-		var procCfg = builder.Configuration
-			.GetSection(ProcessConfig.Section)
-			.Get<ProcessConfig>()!;
-
 		builder.Logging.AddOpenTelemetry(opt =>
 		{
 			opt.SetResourceBuilder(ResourceBuilder.CreateDefault()
-				.AddService(SourceName, serviceVersion: AtjankApp.Version, serviceInstanceId: procCfg.Id.ToString()));
+				.AddService(SourceName, serviceVersion: AtjankApp.Version));
 		});
 
 		builder.Services
 			.AddOpenTelemetry()
 			.ConfigureResource(opt =>
-				opt.AddService(SourceName, serviceVersion: AtjankApp.Version,
-					serviceInstanceId: procCfg.Id.ToString()))
+				opt.AddService(SourceName, serviceVersion: AtjankApp.Version))
 			.UseOtlpExporter(otelCfg.Protocol, otelCfg.BaseUri)
 			.WithMetrics(opt =>
 				opt.AddAspNetCoreInstrumentation()

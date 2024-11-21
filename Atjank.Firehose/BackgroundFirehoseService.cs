@@ -1,3 +1,5 @@
+using Atjank.Firehose.Models;
+
 namespace Atjank.Firehose;
 
 public sealed class BackgroundFirehoseService(ILogger<BackgroundFirehoseService> log, IServiceProvider svc)
@@ -10,11 +12,16 @@ public sealed class BackgroundFirehoseService(ILogger<BackgroundFirehoseService>
 		while (!stoppingToken.IsCancellationRequested)
 		{
 			await using var scope = svc.CreateAsyncScope();
-			var listener = scope.ServiceProvider.GetRequiredService<JetstreamListener>();
+			var listener = scope.ServiceProvider.GetRequiredService<Jetstream>();
 
 			try
 			{
-				await listener.Listen(cursor, stoppingToken);
+				await listener.Listen(
+					() => listener.Send(
+						new SubscriberOptionsUpdateMessage
+							{ Payload = new SubscriberOptionsUpdateMessage.Data { MaxMessageSizeBytes = 16 * 1024 } },
+						stoppingToken),
+					cursor, stoppingToken);
 			}
 			catch (Exception e) when (e is not OperationCanceledException)
 			{

@@ -48,9 +48,7 @@ sealed record JetstreamCommit : JetstreamMessage
 		[JsonRequired] public string Cid { get; init; }
 	}
 
-	public record Delete : Data
-	{
-	}
+	public record Delete : Data;
 }
 
 sealed record JetstreamIdentity : JetstreamMessage

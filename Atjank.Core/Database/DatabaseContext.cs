@@ -57,7 +57,6 @@ public sealed class DatabaseContext(DbContextOptions<DatabaseContext> options) :
 		configurationBuilder.Conventions.Remove<ForeignKeyIndexConvention>();
 
 		configurationBuilder.Properties<DateTime>().HavePrecision(0);
-		configurationBuilder.Properties<AtjankId>().HaveConversion<IdToBigintConverter>();
 	}
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder) =>

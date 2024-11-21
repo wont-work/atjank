@@ -2,8 +2,6 @@ using System.Net;
 using Atjank.Core.Configuration;
 using Atjank.Core.Database;
 using Atjank.Core.Util;
-using Atjank.Core.Util.Locking;
-using IdGen;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.EntityFrameworkCore;
@@ -36,39 +34,29 @@ public static class Builder
 		builder.Services
 			.AddScoped<Urls>();
 
-		var redisSection = builder.Configuration.GetSection(RedisConfig.Section);
-		var redisConfig = redisSection.Get<RedisConfig>();
+		var redisSection = builder.Configuration.GetRequiredSection(RedisConfig.Section);
+		var redisConfig = redisSection.Get<RedisConfig>()!;
 
-		if (redisConfig?.ConnectionString != null)
-		{
-			var redisOptions = ConfigurationOptions.Parse(redisConfig.ConnectionString);
-			redisOptions.Protocol = RedisProtocol.Resp3;
-			redisOptions.ClientName = "atjank";
+		var redisOptions = ConfigurationOptions.Parse(redisConfig.ConnectionString);
+		redisOptions.Protocol = RedisProtocol.Resp3;
+		redisOptions.ClientName = "atjank";
 
-			// neither the cache nor backplane support taking in the multiplexer from DI
-			// i don't like this
-			IConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisOptions);
-			builder.Services
-				.AddSingleton(redis)
-				.AddSingleton<ILock, RedisLock>()
-				.AddStackExchangeRedisCache(opt => opt.ConnectionMultiplexerFactory = () => Task.FromResult(redis))
-				.AddFusionCacheStackExchangeRedisBackplane(opt =>
-					opt.ConnectionMultiplexerFactory = () => Task.FromResult(redis))
-				.AddSingleton<IFusionCacheSerializer>(new FusionCacheNeueccMessagePackSerializer(
-					new MessagePackSerializerOptions(CompositeResolver.Create(
-							NativeDateTimeResolver.Instance,
-							NativeGuidResolver.Instance,
-							NativeDecimalResolver.Instance,
-							AtjankIdMessagePackResolver.Instance,
-							ContractlessStandardResolver.Instance,
-							JsonNodeMessagePackResolver.Instance
-						))
-						.WithCompression(MessagePackCompression.Lz4BlockArray)));
-		}
-		else
-		{
-			builder.Services.AddSingleton<ILock, InProcessLock>();
-		}
+		// neither the cache nor backplane support taking in the multiplexer from DI
+		// i don't like this
+		IConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisOptions);
+		builder.Services
+			.AddSingleton(redis)
+			.AddStackExchangeRedisCache(opt => opt.ConnectionMultiplexerFactory = () => Task.FromResult(redis))
+			.AddFusionCacheStackExchangeRedisBackplane(opt =>
+				opt.ConnectionMultiplexerFactory = () => Task.FromResult(redis))
+			.AddSingleton<IFusionCacheSerializer>(new FusionCacheNeueccMessagePackSerializer(
+				new MessagePackSerializerOptions(CompositeResolver.Create(
+						NativeDateTimeResolver.Instance,
+						NativeGuidResolver.Instance,
+						NativeDecimalResolver.Instance,
+						ContractlessStandardResolver.Instance
+					))
+					.WithCompression(MessagePackCompression.Lz4BlockArray)));
 
 		builder.Services
 			.AddFusionCache()
@@ -110,22 +98,12 @@ public static class Builder
 			})
 			.ConfigurePrimaryHttpMessageHandler(svc => new SocketsHttpHandler
 			{
-				MaxAutomaticRedirections = 2,
+				MaxAutomaticRedirections = 1,
 				AutomaticDecompression = DecompressionMethods.All,
 				ConnectCallback = svc.GetRequiredService<Resolver>().ConnectCallback
 			});
 
 		builder.Services
-			.AddSingleton(TimeProvider.System)
-			.AddSingleton(svc => new IdGenerator(
-				svc.GetRequiredService<IOptionsMonitor<ProcessConfig>>().CurrentValue.Id,
-				new IdGeneratorOptions
-				{
-					SequenceOverflowStrategy = SequenceOverflowStrategy.SpinWait,
-					TimeSource = new DefaultTimeSource(
-						new DateTime(2024, 11, 1, 0, 0, 0, DateTimeKind.Utc))
-				})
-			)
 			.AddPooledDbContextFactory<DatabaseContext>((svc, opt) =>
 				DatabaseContext.Configure(svc.GetRequiredService<IOptions<NpgsqlConnectionStringBuilder>>().Value, opt))
 			.AddScoped<DatabaseContext>(svc =>

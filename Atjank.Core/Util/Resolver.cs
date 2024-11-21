@@ -1,5 +1,3 @@
-// TODO: just... find a better impl that doesn't light up linters like christmas trees
-
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;

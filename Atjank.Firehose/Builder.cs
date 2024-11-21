@@ -4,7 +4,7 @@ public static class Builder
 {
 	public static IHostApplicationBuilder UseFirehose(this IHostApplicationBuilder builder)
 	{
-		builder.Services.AddScoped<JetstreamListener>();
+		builder.Services.AddScoped<Jetstream>();
 
 		return builder;
 	}
