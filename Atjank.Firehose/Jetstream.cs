@@ -5,11 +5,19 @@ using System.Text.Json;
 using Atjank.Core.Configuration;
 using Atjank.Firehose.Models;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Atjank.Firehose;
 
-sealed class Jetstream(ILogger<Jetstream> log, IOptionsSnapshot<GeneralConfig> cfg, HttpClient http) : IDisposable
+sealed class Jetstream(
+	ILogger<Jetstream> log,
+	IOptionsSnapshot<GeneralConfig> cfg,
+	HttpClient http,
+	IConnectionMultiplexer redis
+) : IDisposable
 {
+	const string CursorKey = "jetstream-cursor";
+
 	public static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -24,15 +32,20 @@ sealed class Jetstream(ILogger<Jetstream> log, IOptionsSnapshot<GeneralConfig> c
 
 	public ulong Cursor { get; set; }
 
-	public void Dispose()
-	{
-		_ws.Dispose();
-	}
+	public void Dispose() => _ws.Dispose();
 
 	public async Task Listen(Func<Task>? onConnect, ulong cursor = default, CancellationToken ct = default)
 	{
 		if (cursor != default)
+		{
 			Cursor = cursor;
+		}
+		else
+		{
+			var r = redis.GetDatabase();
+			var savedCursor = await r.StringGetAsync(CursorKey);
+			if (savedCursor.HasValue) Cursor = ulong.Parse(savedCursor.ToString());
+		}
 
 		var pipe = new Pipe();
 		await Task.WhenAll(
@@ -45,7 +58,7 @@ sealed class Jetstream(ILogger<Jetstream> log, IOptionsSnapshot<GeneralConfig> c
 	public async Task Send(SubscriberSourcedMessage msg, CancellationToken ct = default)
 	{
 		if (log.IsEnabled(LogLevel.Trace))
-			log.LogTrace("Send: {Json}", JsonSerializer.Serialize(msg, JsonOptions));
+			log.LogTrace("Sending {Json}", JsonSerializer.Serialize(msg, JsonOptions));
 
 		var data = JsonSerializer.SerializeToUtf8Bytes(msg, JsonOptions);
 		await _ws.SendAsync(data, WebSocketMessageType.Text, WebSocketMessageFlags.EndOfMessage, ct);
@@ -105,8 +118,11 @@ sealed class Jetstream(ILogger<Jetstream> log, IOptionsSnapshot<GeneralConfig> c
 		{
 			await Task.Delay(TimeSpan.FromSeconds(3), ct);
 
-			log.LogTrace("approx {Count} msg/s", _messageCount / 3f);
+			log.LogTrace("Roughly {Count} msg/s", _messageCount / 3f);
 			_messageCount = 0;
+
+			var r = redis.GetDatabase();
+			await r.StringSetAsync(CursorKey, Cursor.ToString(), flags: CommandFlags.FireAndForget);
 		}
 	}
 }
