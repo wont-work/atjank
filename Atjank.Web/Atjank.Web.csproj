@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Atjank.Core\Atjank.Core.csproj"/>
+		<ProjectReference Include="..\Atjank.Firehose\Atjank.Firehose.csproj"/>
 		<ProjectReference Include="..\Atjank.Worker\Atjank.Worker.csproj"/>
 	</ItemGroup>
 

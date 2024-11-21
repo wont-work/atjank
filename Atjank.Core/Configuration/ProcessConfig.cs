@@ -6,4 +6,5 @@ public sealed class ProcessConfig
 
 	public int Id { get; set; }
 	public bool WebWithWorker { get; set; } = true;
+	public bool WebWithFirehose { get; set; } = true;
 }

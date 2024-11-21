@@ -1,6 +1,7 @@
 using Atjank.Core;
 using Atjank.Core.Configuration;
 using Atjank.Core.Hosting;
+using Atjank.Firehose;
 using Atjank.Web;
 using Atjank.Web.Debugging;
 using Atjank.Worker;
@@ -24,6 +25,12 @@ if (proc?.WebWithWorker == true)
 {
 	builder.UseWorker();
 	builder.Services.AddQuartzServer(opt => opt.WaitForJobsToComplete = true);
+}
+
+if (proc?.WebWithFirehose == true)
+{
+	builder.UseFirehose();
+	builder.Services.AddHostedService<BackgroundFirehoseService>();
 }
 
 var app = builder.Build();
