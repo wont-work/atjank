@@ -1,0 +1,6 @@
+@Atjank_HostAddress = http://localhost:5074
+
+GET {{Atjank_HostAddress}}/
+Accept: application/json
+
+###

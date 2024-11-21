@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<ItemGroup>
+		<PackageReference Include="Quartz.AspNetCore" Version="3.13.1"/>
+		<PackageReference Include="Scalar.AspNetCore" Version="1.2.41"/>
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Atjank.Core\Atjank.Core.csproj"/>
+		<ProjectReference Include="..\Atjank.Worker\Atjank.Worker.csproj"/>
+	</ItemGroup>
+
+</Project>

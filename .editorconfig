@@ -1,0 +1,59 @@
+root = true
+
+[*]
+indent_style = tab
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+[*.yml]
+indent_style = space
+
+[*.xml]
+indent_size = 2
+
+[*.{css,js,ts,vue,json}]
+indent_size = 2
+tab_width = 2
+
+[*.{cs,vb}]
+indent_size = 4
+tab_width = 4
+
+csharp_new_line_before_members_in_object_initializers = false
+csharp_prefer_braces = when_multiline
+csharp_preferred_modifier_order = public, private, protected, internal, file, new, static, abstract, virtual, sealed, readonly, override, extern, unsafe, volatile, async, required:suggestion
+csharp_style_expression_bodied_local_functions = when_on_single_line
+csharp_style_expression_bodied_methods = when_on_single_line
+csharp_style_expression_bodied_operators = when_on_single_line
+csharp_style_namespace_declarations = file_scoped
+csharp_style_prefer_utf8_string_literals = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+dotnet_style_parentheses_in_arithmetic_binary_operators = never_if_unnecessary:none
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:none
+dotnet_style_parentheses_in_relational_binary_operators = never_if_unnecessary:none
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_require_accessibility_modifiers = omit_if_default:suggestion
+
+dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.S112.severity = none
+dotnet_diagnostic.S907.severity = none
+dotnet_diagnostic.S1135.severity = none
+dotnet_diagnostic.S1199.severity = none
+dotnet_diagnostic.S3928.severity = none
+dotnet_diagnostic.VSTHRD200.severity = none
+
+# These settings are appropriate for most projects that *never* run inside a process with a main thread and `SynchronizationContext`.
+# Examples of such applications are ASP.NET Core and console applications.
+dotnet_diagnostic.VSTHRD012.severity = none
+dotnet_diagnostic.VSTHRD003.severity = none
