@@ -28,11 +28,7 @@ public static class Builder
 			.AddConsole(opt => opt.FormatterName = "atjank")
 			.AddConsoleFormatter<LogFormatter, ConsoleFormatterOptions>();
 
-		builder
-			.UseConfiguration();
-
-		builder.Services
-			.AddScoped<Urls>();
+		builder.UseConfiguration();
 
 		var redisSection = builder.Configuration.GetRequiredSection(RedisConfig.Section);
 		var redisConfig = redisSection.Get<RedisConfig>()!;

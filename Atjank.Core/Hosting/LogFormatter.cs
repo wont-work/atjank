@@ -43,12 +43,18 @@ sealed class LogFormatter() : ConsoleFormatter("Atjank")
 	)
 	{
 		writer.Write(LevelIndicator(level));
-		writer.Write("\x1b[0;2m");
+		writer.Write("\e[0;2m");
 
 		if (requestId != null)
-			writer.Write($" [{requestId}]");
+		{
+			writer.Write(" [");
+			writer.Write(requestId);
+			writer.Write("]");
+		}
 
-		writer.Write($" [{category}]\x1b[0m ");
+		writer.Write(" [");
+		writer.Write(category);
+		writer.Write("]\e[0m ");
 		writer.WriteLine(message);
 
 		if (exception != null)
@@ -57,10 +63,10 @@ sealed class LogFormatter() : ConsoleFormatter("Atjank")
 
 	static string LevelIndicator(LogLevel level) => level switch
 	{
-		LogLevel.Warning => "\x1b[33mW",
-		LogLevel.Error => "\x1b[31mE",
-		LogLevel.Critical => "\x1b[1;31mC",
-		LogLevel.Information => "\x1b[34mI",
+		LogLevel.Warning => "\e[33mW",
+		LogLevel.Error => "\e[31mE",
+		LogLevel.Critical => "\e[1;31mC",
+		LogLevel.Information => "\e[34mI",
 
 		_ => " "
 	};
