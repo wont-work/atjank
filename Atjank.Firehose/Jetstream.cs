@@ -1,8 +1,8 @@
+using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Threading.Channels;
 using Atjank.Core.Configuration;
 using Atjank.Firehose.Models;
 using Microsoft.Extensions.Options;
@@ -32,19 +32,21 @@ sealed class Jetstream(
 		AllowOutOfOrderMetadataProperties = true
 	};
 
-	readonly Uri _endpoint = cfg.Value.Jetstream;
-
-	readonly Channel<JetstreamMessage> _jobs =
-		Channel.CreateBounded<JetstreamMessage>(new BoundedChannelOptions(cfg.Value.MessageConcurrency) { SingleWriter = true });
-
 	readonly IDatabase _redis = redis.GetDatabase();
+	readonly SemaphoreSlim _workerLimiter = new(cfg.Value.MessageConcurrency, cfg.Value.MessageConcurrency);
+
+	readonly ConcurrentDictionary<long, Task> _workers = [];
 	readonly ClientWebSocket _ws = new();
 
-	ulong _messageCount;
+	ulong _messagesPer3Seconds;
 
 	public ulong Cursor { get; set; }
 
-	public void Dispose() => _ws.Dispose();
+	public void Dispose()
+	{
+		_ws.Dispose();
+		_workerLimiter.Dispose();
+	}
 
 	public async Task Listen(Func<Task>? onConnect, ulong cursor = default, CancellationToken ct = default)
 	{
@@ -64,13 +66,15 @@ sealed class Jetstream(
 			await Task.WhenAll(
 				JetstreamReader(pipe.Writer, onConnect, ct),
 				MessageQueuer(pipe.Reader, ct),
-				Overseer(ct),
 				CursorPersistenceTimer(ct)
 			);
 		}
 		finally
 		{
 			await _redis.StringSetAsync(CursorKey, Cursor, flags: CommandFlags.FireAndForget);
+
+			log.LogInformation("Waiting to complete {Count} running jobs...", _workers.Count);
+			await Task.WhenAll(_workers.Values);
 		}
 	}
 
@@ -87,7 +91,7 @@ sealed class Jetstream(
 	{
 		List<string> query = ["?requireHello=true"];
 		if (Cursor != default) query.Add($"cursor={Cursor}");
-		var endpoint = new Uri(_endpoint, string.Join('&', query));
+		var endpoint = new Uri(cfg.Value.Jetstream, string.Join('&', query));
 		log.LogInformation("Connecting to Jetstream at {Endpoint}", endpoint);
 
 		_ws.Options.HttpVersion = HttpVersion.Version20;
@@ -97,23 +101,27 @@ sealed class Jetstream(
 		log.LogDebug("Connected.");
 		if (onConnect != null) await onConnect();
 
-		while (!ct.IsCancellationRequested && _ws.State == WebSocketState.Open)
+		try
 		{
-			var read = await _ws.ReceiveAsync(pipe.GetMemory(16 * 1024), ct);
-			pipe.Advance(read.Count);
-			if (!read.EndOfMessage) continue;
+			while (!ct.IsCancellationRequested && _ws.State == WebSocketState.Open)
+			{
+				var read = await _ws.ReceiveAsync(pipe.GetMemory(16 * 1024), ct);
+				pipe.Advance(read.Count);
+				if (!read.EndOfMessage) continue;
 
-			var res = await pipe.FlushAsync(ct);
-			if (res.IsCompleted) break;
+				var res = await pipe.FlushAsync(ct);
+				if (res.IsCompleted) break;
+			}
 		}
-
-		await pipe.CompleteAsync();
+		finally
+		{
+			await pipe.CompleteAsync();
+		}
 	}
 
 	async Task MessageQueuer(PipeReader pipe, CancellationToken ct = default)
 	{
 		await using var stream = pipe.AsStream();
-		var queue = _jobs.Writer;
 
 		while (!ct.IsCancellationRequested)
 		{
@@ -122,7 +130,9 @@ sealed class Jetstream(
 				.Catch<JetstreamMessage?, Exception>(e =>
 					AsyncEnumerableEx.Return<JetstreamMessage>(new JetstreamExceptionMessage
 					{
-						Did = "", TimeUs = 0, Exception = e
+						Did = "",
+						TimeUs = 0,
+						Exception = e
 					}));
 
 			await foreach (var message in messages)
@@ -141,18 +151,24 @@ sealed class Jetstream(
 					continue;
 				}
 
-				_messageCount++;
+				_messagesPer3Seconds++;
 				Cursor = Math.Max(Cursor, message.TimeUs);
 
-				await queue.WaitToWriteAsync(ct);
-				await queue.WriteAsync(message, ct);
+				await _workerLimiter.WaitAsync(ct);
+				_ = Task.Run(async () =>
+				{
+					var task = Worker(message);
+					var id = Random.Shared.NextInt64();
+
+					if (!_workers.TryAdd(id, task))
+						log.LogWarning("Worker tracker key collision. Id {Id} isn't as unique as I thought it'd be", id);
+
+					await task;
+
+					_workers.Remove(id, out _);
+				}, ct);
 			}
 		}
-	}
-
-	async Task Overseer(CancellationToken ct = default)
-	{
-		await Task.WhenAll(Enumerable.Repeat(() => Worker(ct), cfg.Value.MessageConcurrency).Select(Task.Run));
 	}
 
 	async Task CursorPersistenceTimer(CancellationToken ct = default)
@@ -161,27 +177,25 @@ sealed class Jetstream(
 		{
 			await Task.Delay(TimeSpan.FromSeconds(3), ct);
 
-			log.LogTrace("Roughly {Count} msg/s ingested", _messageCount / 3f);
-			_messageCount = 0;
+			log.LogTrace(
+				"Roughly {MessageCount} msg/s ingested - Current worker count: {WorkerCount} ({LimiterCount} slots left)",
+				_messagesPer3Seconds / 3f, _workers.Count, _workerLimiter.CurrentCount
+			);
+			_messagesPer3Seconds = 0;
 
 			await _redis.StringSetAsync(CursorKey, Cursor, flags: CommandFlags.FireAndForget);
 		}
 	}
 
-	async Task Worker(CancellationToken ct)
+	async Task Worker(JetstreamMessage message)
 	{
-		var queue = _jobs.Reader;
-
 		try
 		{
-			await foreach (var message in queue.ReadAllAsync(ct))
-			{
-				// TODO
-			}
+			await Task.Delay(1); // todo: do work
 		}
-		catch (OperationCanceledException)
+		finally
 		{
-			/* ignore */
+			_workerLimiter.Release();
 		}
 	}
 }
