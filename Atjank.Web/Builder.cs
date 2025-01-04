@@ -1,7 +1,10 @@
+using System.Diagnostics;
 using Atjank.Core.Configuration;
 using Atjank.Core.Hosting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 
@@ -21,19 +24,16 @@ static class Builder
 			var security = new OpenApiSecurityScheme
 			{
 				Type = SecuritySchemeType.Http,
-				Name = "Authorization",
 				Scheme = "Bearer",
-				Reference = new OpenApiReference
-				{
-					Type = ReferenceType.SecurityScheme,
-					Id = "AtjankAuth"
-				}
+				In = ParameterLocation.Header,
+				BearerFormat = "Json Web Token",
+				Name = "Authorization"
 			};
 
 			opt.AddDocumentTransformer((doc, ctx, ct) =>
 			{
 				doc.Components ??= new OpenApiComponents();
-				doc.Components.SecuritySchemes.Add("AtjankAuth", security);
+				doc.Components.SecuritySchemes.Add("Bearer", security);
 
 				return Task.CompletedTask;
 			});
@@ -59,6 +59,25 @@ static class Builder
 				};
 			});
 
+		builder.Services
+			.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+			.AddJwtBearer(opt =>
+			{
+				opt.TokenValidationParameters = new TokenValidationParameters
+				{
+					ValidAlgorithms = ["ES256", "ES256K"],
+					ValidTypes = ["JWT"],
+				};
+
+				opt.Events = new JwtBearerEvents
+				{
+					OnTokenValidated = async ctx =>
+					{
+						Debugger.Break();
+					}
+				};
+			});
+
 		return builder;
 	}
 
@@ -68,6 +87,7 @@ static class Builder
 			.UseForwardedHeaders()
 			.UseStaticFiles()
 			.UseRouting()
+			.UseAuthentication()
 			.Use((ctx, next) =>
 			{
 				ctx.Response.Headers.RequestId = ctx.TraceIdentifier;

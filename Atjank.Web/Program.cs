@@ -4,6 +4,7 @@ using Atjank.Core.Hosting;
 using Atjank.Firehose;
 using Atjank.Web;
 using Atjank.Web.Debugging;
+using Atjank.Web.Reactions;
 using Atjank.Worker;
 using Quartz.AspNetCore;
 
@@ -36,7 +37,8 @@ if (proc?.WebWithFirehose == true)
 var app = builder.Build();
 
 app.UseCore();
-app.MapDebug();
+app.MapDebug()
+	.MapXrpc();
 
 await app.Initialize();
 await app.RunAsync();
